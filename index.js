@@ -1,4 +1,5 @@
 var fs = require('fs')
+  , ua = require('useragent')
   , crypto = require('crypto')
   , qs = require('querystring')
   , url = require('url')
@@ -49,7 +50,7 @@ function middleware (req, res, next) {
   _getDecay(req.query.decay, function (e, decay) {
     response.decay = decay
     
-    _getAgent(req.headers['user-agent'], 2, function (e, useragent) {
+    _getAgent(req.headers['user-agent'], function (e, useragent) {
       response.useragent = useragent
       
       _getLanguage(function (e, language) {
@@ -114,40 +115,16 @@ function middleware (req, res, next) {
     }
   }
 
-  function _getAgent (userAgent, elements, callback) {
+  function _getAgent (userAgent, callback) {
   
     // If userAgent is undefined return browser: false
-    if(typeof userAgent === 'undefined')
-      return callback({browser: false, version: ''})
+    if(typeof userAgent === 'undefined') {
+      return callback({browser: false, version: ''});
+    }
 
-    var regexps = {
-      'Chrome': [ /Chrome\/(\S+)/ ],
-      'Firefox': [ /Firefox\/(\S+)/ ],
-      'MSIE': [ /MSIE (\S+);/ ],
-      'Opera': [
-        /Opera\/.*?Version\/(\S+)/,     /* Opera 10 */
-        /Opera\/(\S+)/                  /* Opera 9 and older */
-      ],
-        'Safari': [ /Version\/(\S+).*?Safari\// ]
-      }
-      , re
-      , m
-      , browser
-      , version
-    if (typeof elements === 'undefined') {
-      elements = 2
-    }
-    else if (elements === 0) {
-      elements = 1337
-    }
-    for (browser in regexps) {
-      while (re = regexps[browser].shift()) {
-        if (m = userAgent.match(re)) {
-          version = (m[1].match(new RegExp('[^.]+(?:\.[^.]+){0,' + --elements + '}')))[0];
-          callback(null, {browser:browser, version:version})
-        }
-      }
-    }
+    var agent = ua.parse(userAgent);
+
+    return callback(null, {browser:agent.family, version: agent.toVersion()});
   }
   
   function _fixHref (str, callback) {
